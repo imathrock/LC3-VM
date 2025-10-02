@@ -1,5 +1,12 @@
 # Design Document
 
+I decided to follow the LC3 VM tutorial and I would be making an LC3 virtual machine first and then move on to RV32I. 
+## LC3
+
+### Registers
+There are a total of 10 registers, 8 general purpose, 1 program counter, 1 condition register used for branching. 
+The instruction set of LC3 does not support branching based on register values like SM213 designed by mike feely. This ISA feels simple enough that I might try and make a VM for that aswell after LC3. 
+
 ## Registers
 There are a total of 32 registers, they are denoted as follows:
 - x0-31

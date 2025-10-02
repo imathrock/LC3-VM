@@ -8,7 +8,7 @@
 static int memory[max_mem]; // Total 2 Mb of memory for this computer
 
 /// @brief GPT generated enum of all the registers. Makes it easier to write instructions. 
-typedef enum {
+enum {
     X0,  /* zero  - hardwired 0 */
     X1,  /* ra    - return address */
     X2,  /* sp    - stack pointer */
@@ -43,7 +43,7 @@ typedef enum {
     X31, /* t6    - temporary */
 
     REG_COUNT
-} RiscVReg;
+};
 
 
 /// @brief This is the Whole instruction set to be implemented. Enum generated using GPT, menial.
@@ -74,8 +74,7 @@ typedef enum {
 /// @brief CPU state representation struct, all the CPU current metadata is stored in this
 typedef struct {
     int registers[REG_COUNT];
-    int PC;
-    
+    uint32_t PC; // 32 bit unsigned to allow for a larger range of values.
 }RVSM;
 
 
