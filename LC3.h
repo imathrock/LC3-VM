@@ -72,8 +72,36 @@ enum{
 /*
     In the tutorial there is no kind of struct that exists to denote the current state of the CPU.
     So I am going to create it here. It should basically present the current state of all registers and cond flags.
+    I am going to maintain this practice for the next ones as well. 
+    The reason for this kind of struct is that I can call an instruction deconstructor and store 
+    everything required immediately in the struct making it easy to work with. 
 */
 typedef struct{
     uint16_t reg[COUNT];
-    int COND;
+    int running;
+    uint16_t instr;
+    uint16_t op;
+    uint8_t dest_reg;
+    uint8_t source_reg_1;
+    uint8_t source_reg_2;
+    uint8_t ival;
+    uint16_t pc_offset;
 } LC3;
+
+#define SIGN_EXTEND(val, bitcount) ((val >> (bitcount-1)) & 1) ? (val | (0xffff << bitcount)) : val
+
+void update_flag(LC3 lc3){
+    if(lc3.reg[lc3.dest_reg] == 0){lc3.reg[COND] = ZRO;}
+    else if(lc3.reg[lc3.dest_reg]>>15){lc3.reg[COND] = NEG;}
+    else{lc3.reg[COND] = POS;}
+}
+
+/*
+    Reading from memory given a Program counter value.
+*/
+#define MEM_READ(PCval) (uint16_t)(memory[PCval])
+
+/*
+    Writing to memory given address and value
+*/
+#define MEM_WRITE(addr,val) ((addr) < max_mem_size ? (memory[(addr)] = (uint16_t)(val), 1) : 0)

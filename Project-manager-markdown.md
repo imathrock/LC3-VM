@@ -12,6 +12,7 @@ This file just defines objectives and tasks to be done, updated completely at ra
 - [x] Create register array and enums that defines all of the registers.
 - [x] Create enums for all instructions
 - [X] Start Following the LC3 virtual machine tutorial, understand and define the architecture
-- [] Create a writeup of what each LC3 instruction
-- [] Writeup how different it is from SM213 and RV32I
-- [] Create a LC3 state machine
+- [ ] Create a writeup of what each LC3 instruction
+- [ ] Writeup how different it is from SM213 and RV32I
+- [X] Create a LC3 state machine
+- [ ] Create tests for LC3 ISA
