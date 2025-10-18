@@ -9,10 +9,10 @@ This file just defines objectives and tasks to be done, updated completely at ra
 - A framebuffer display using some C graphics library.
 
 ## Tasks
-- [x] Create register array and enums that defines all of the registers.
-- [x] Create enums for all instructions
+- [X] Create register array and enums that defines all of the registers.
+- [X] Create enums for all instructions
 - [X] Start Following the LC3 virtual machine tutorial, understand and define the architecture
-- [ ] Create a writeup of what each LC3 instruction
+- [ ] Implement all instructions. 
 - [ ] Writeup how different it is from SM213 and RV32I
 - [X] Create a LC3 state machine
 - [ ] Create tests for LC3 ISA

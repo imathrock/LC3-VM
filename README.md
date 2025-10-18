@@ -9,7 +9,7 @@ I will be building a total of 3 virtual machines, when I say virtual machines I 
 
 
 ## References
-[Write your own VM by Justin Meiners and Ryan Pendleton](https://www.jmeiners.com/lc3-vm/#:lc3.c_2)
+[Write your own VM by Justin Meiners and Ryan Pendleton](https://www.jmeiners.com/lc3-vm/)
 
 [LC3 ISA description](https://www.jmeiners.com/lc3-vm/supplies/lc3-isa.pdf)
 

@@ -70,6 +70,20 @@ enum{
 };
 
 /*
+    The following is an enum of all of the trap routines. Interesting note, Trap routines are basically function calls
+    to pre written subroutines that are written in assembly. In this computer, the addresses below 0x3000 are reserved
+    for such trap routines. Whenever these are called they just jump to the routine.
+*/
+enum{
+    TRAP_GETC = 0x20, // gets character from keyboard not echoed onto terminal
+    TRAP_OUT = 0x21, // outputs a character
+    TRAP_PUTS = 0x22, // Output a word string
+    TRAP_IN = 0x23, // Get character from keyboard that is echoed onto terminal
+    TRAP_PUTSP = 0x24, // Output a byte string. 
+    TRAP_HALT = 0x25 // Halt the program. 
+};
+
+/*
     In the tutorial there is no kind of struct that exists to denote the current state of the CPU.
     So I am going to create it here. It should basically present the current state of all registers and cond flags.
     I am going to maintain this practice for the next ones as well. 
@@ -102,6 +116,6 @@ void update_flag(LC3 lc3){
 #define MEM_READ(PCval) (uint16_t)(memory[PCval])
 
 /*
-    Writing to memory given address and value
+    Writing to memory given address and value and checking bounds to ensure no overflow occurs
 */
 #define MEM_WRITE(addr,val) ((addr) < max_mem_size ? (memory[(addr)] = (uint16_t)(val), 1) : 0)

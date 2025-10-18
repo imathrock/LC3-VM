@@ -26,6 +26,10 @@ It holds everything I need, I took this Idea form UBC CPSC 313 course where ther
 
 This does however make stuff kinda annoying because I have to keep typing "lc3.stuff" again and again because it is statically defined. But I'll make do with it. 
 
+### Instructions:
+All of the instructions are well described here [LC3 ISA description](https://www.jmeiners.com/lc3-vm/supplies/lc3-isa.pdf)
+
+
 ## RISC-V 32I
 
 ### Registers
