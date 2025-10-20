@@ -2,7 +2,41 @@
 
 static LC3 lc3;
 
-int main(int argc, const char*argv){
+void handle_interrupt(int signal){
+    restore_input_buffering();
+    printf("\n");
+    exit(-2);
+}
+
+static uint16_t inline swap16(uint16_t x){
+    return (x>>8)|(x<<8);
+}
+
+void read_image_file(FILE*file){
+    uint16_t origin;
+    fread(&origin, sizeof(origin), 1,file);
+    origin = swap16(origin);
+
+    uint16_t max_read = max_mem_size - origin;
+    uint16_t*p = memory + origin;
+    int read = fread(p,sizeof(uint16_t), max_read, file);
+
+    while (read-- > 0){
+        *p = swap16(*p);
+        ++p;
+    }
+}
+
+int read_image(const char* image_path)
+{
+    FILE* file = fopen(image_path, "rb");
+    if (!file) { return 0; };
+    read_image_file(file);
+    fclose(file);
+    return 1;
+}
+
+int main(int argc, const char* argv[]){
     if (argc < 2)   {
         printf("lc3 [image-file1] ...\n");
         exit(2);
@@ -17,17 +51,17 @@ int main(int argc, const char*argv){
 
     lc3.running = 1;
     while(lc3.running){
-        lc3.instr = mem_read(reg[PC]++);
+        lc3.instr = MEM_READ(reg[PC]++); // Increment PC
         lc3.op = lc3.instr >> 12;
         switch (lc3.op)
         {
         case BR:
         /*
             Conditional branch instruction. conditions matched with flags provided
-            PC <- PC+ PC_OFFSET
+            BRnzp LABEL
         */
             lc3.pc_offset = SIGN_EXTEND(lc3.instr & 0x1ff,9);
-            if(lc3.reg[COND] & (uint16_t)((lc3.instr >> 9) &0x7)){ // Did not want to allocate on stack so 
+            if(lc3.reg[COND] & (uint16_t)((lc3.instr >> 9) &0x7)){ // condition matching with instr.
                 lc3.reg[PC] += lc3.pc_offset;
             }
             break;
@@ -147,6 +181,9 @@ int main(int argc, const char*argv){
         case JMP:
         /*
             JMP BaseR
+            RET 
+            return loads return address form R7 and jumps to it. 
+            The RET instruction is defined with dest reg as R7
         */
             lc3.dest_reg = (lc3.instr >> 6) & 0x7;
             lc3.reg[PC] = lc3.reg[lc3.dest_reg];
@@ -172,17 +209,62 @@ int main(int argc, const char*argv){
             lc3.reg[R7] = lc3.reg[PC];
             switch (lc3.instr & 0xff){
                 case TRAP_GETC:
-                    
+                /*
+                    Reads ascii characters
+                */
+                    lc3.reg[R0] = (uint16_t)getchar();
+                    lc3.dest_reg = R0;
+                    update_flag(lc3);
                     break;
                 case TRAP_PUTS:
+                /*
+                    PUTS writes a string of ascii characters to the console display. 
+                    Starts with the memory address stored in R0, writing is null terminated. 
+                */
+                    uint16_t *c = memory + lc3.reg[R0];
+                    while(*c){
+                        putc((char)*c,stdout); // prints it on the terminal. 
+                        ++c;
+                    }
+                    fflush(stdout); // flushes the buffer
                     break;
                 case TRAP_IN:
+                /*
+                    Reads and prints the ascii character read on the terminal.
+                */
+                    printf("Enter a character:");
+                    char input_char = getchar();
+                    putc(input_char, stdout);
+                    lc3.reg[R0] = (uint16_t)input_char;
+                    fflush(stdout);
+                    lc3.dest_reg = R0;
+                    update_flag(lc3);
                     break;
                 case TRAP_OUT:
+                /*
+                    Kinda like the print statement, outputs stuff from R0 onto terminal
+                */
+                    putc((char)lc3.reg[R0],stdout);
+                    fflush(stdout);
                     break;
                 case TRAP_PUTSP:
+                /*
+                    Outputs string
+                */
+                    uint16_t*c = memory+lc3.reg[R0];
+                    while(*c){
+                        char char1 = (*c)&0xff;
+                        putc(char1,stdout);
+                        char char2 = (*c) >> 8;
+                        if(char2) putc(char2, stdout);
+                        putc(char2,stdout);
+                        ++c;
+                    }
                     break;
                 case TRAP_HALT:
+                    puts("HALT");
+                    fflush(stdout);
+                    lc3.running = 0;
                     break;
                 default:
                     perror("BAD INSTRUCTION");

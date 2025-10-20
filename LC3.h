@@ -1,6 +1,36 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include <signal.h>
+/* windows only */
+#include <Windows.h>
+#include <conio.h>  // _kbhit
+
+HANDLE hStdin = INVALID_HANDLE_VALUE;
+DWORD fdwMode, fdwOldMode;
+
+void disable_input_buffering()
+{
+    hStdin = GetStdHandle(STD_INPUT_HANDLE);
+    GetConsoleMode(hStdin, &fdwOldMode); /* save old mode */
+    fdwMode = fdwOldMode
+            ^ ENABLE_ECHO_INPUT  /* no input echo */
+            ^ ENABLE_LINE_INPUT; /* return when one or
+                                    more characters are available */
+    SetConsoleMode(hStdin, fdwMode); /* set new mode */
+    FlushConsoleInputBuffer(hStdin); /* clear buffer */
+}
+
+void restore_input_buffering()
+{
+    SetConsoleMode(hStdin, fdwOldMode);
+}
+
+uint16_t check_key()
+{
+    return WaitForSingleObject(hStdin, 1000) == WAIT_OBJECT_0 && _kbhit();
+}
+
 /*
   LC3 has a maximum of 65536 bytes of memory, 2^16 bits, Which means this is a total of 128 kilobytes.
   Kinda simulates a microcontroller amount of memory.
@@ -39,23 +69,22 @@ uint16_t reg[COUNT];
     I noticed that there was no halt instruction so I have added it in here and might remove it later on if it DNE.
 */
 enum{
-    BR = 0, // Unconditional branch, just like jump but can only change PC by a small number
-    ADD,    // Addition
-    LD,     // loading memory into registers
-    ST,     // Storing memory from registers
-    JSR,    // jump register
-    AND,    // Bitwise AND
-    LDR,    // Load register
-    STR,    // Store register
-    RTI,    // unused
-    NOT,    // bitwise NOT
-    LDI,    // load indirect
-    STI,    // Store indirect
-    JMP,    // Jump
-    RES,    // reserve, Unused (might assign sub instruction to this)
-    LEA,    // Load effective address
-    TRAP,   // Execute effective trap
-    HALT,   // Halts the Processor, This does nto
+    BR  = 0x0, // Unconditional branch, just like jump but can only change PC by a small number
+    ADD = 0x1,    // Addition
+    LD  = 0x2,     // loading memory into registers
+    ST  = 0x3,     // Storing memory from registers
+    JSR = 0x4,    // jump register
+    AND = 0x5,    // Bitwise AND
+    LDR = 0x6,    // Load register
+    STR = 0x7,    // Store register
+    RTI = 0x8,    // unused
+    NOT = 0x9,    // bitwise NOT
+    LDI = 0xa,    // load indirect
+    STI = 0xb,    // Store indirect
+    JMP = 0xc,    // Jump
+    RES = 0xd,    // reserve, Unused (might assign sub instruction to this)
+    LEA = 0xe,    // Load effective address
+    TRAP= 0xf   // Execute effective trap
 };
 
 /*
@@ -81,6 +110,14 @@ enum{
     TRAP_IN = 0x23, // Get character from keyboard that is echoed onto terminal
     TRAP_PUTSP = 0x24, // Output a byte string. 
     TRAP_HALT = 0x25 // Halt the program. 
+};
+
+/*
+    Memory mapped IO, Used for keyboard interrupts
+*/
+enum{
+    KBSR = 0xfe00,
+    KBDR = 0xfe02
 };
 
 /*
@@ -113,7 +150,18 @@ void update_flag(LC3 lc3){
 /*
     Reading from memory given a Program counter value.
 */
-#define MEM_READ(PCval) (uint16_t)(memory[PCval])
+uint16_t MEM_READ(uint16_t PCval){
+    if (PCval == KBSR){
+        if (check_key()){
+            memory[KBSR] = (1<<15);
+            memory[KBDR] = getchar();
+        }
+        else{
+            memory[KBSR] = 0;
+        }
+    }
+    return memory[PCval];
+} 
 
 /*
     Writing to memory given address and value and checking bounds to ensure no overflow occurs
