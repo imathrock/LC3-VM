@@ -28,7 +28,7 @@ void restore_input_buffering()
 
 uint16_t check_key()
 {
-    return WaitForSingleObject(hStdin, 1000) == WAIT_OBJECT_0 && _kbhit();
+    return WaitForSingleObject(hStdin, 0) == WAIT_OBJECT_0 && _kbhit();
 }
 
 /*
@@ -141,10 +141,10 @@ typedef struct{
 
 #define SIGN_EXTEND(val, bitcount) ((val >> (bitcount-1)) & 1) ? (val | (0xffff << bitcount)) : val
 
-void update_flag(LC3 lc3){
-    if(lc3.reg[lc3.dest_reg] == 0){lc3.reg[COND] = ZRO;}
-    else if(lc3.reg[lc3.dest_reg]>>15){lc3.reg[COND] = NEG;}
-    else{lc3.reg[COND] = POS;}
+void update_flag(LC3 *lc3){
+    if(lc3->reg[lc3->dest_reg] == 0){lc3->reg[COND] = ZRO;}
+    else if(lc3->reg[lc3->dest_reg]>>15){lc3->reg[COND] = NEG;}
+    else{lc3->reg[COND] = POS;}
 }
 
 /*

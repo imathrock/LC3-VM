@@ -47,11 +47,13 @@ int main(int argc, const char* argv[]){
             exit(1);
         }
     }
+    signal(SIGINT, handle_interrupt);
+    disable_input_buffering();
     lc3.reg[COND] = ZRO;
-
+    lc3.reg[PC] = 0x3000;
     lc3.running = 1;
     while(lc3.running){
-        lc3.instr = MEM_READ(reg[PC]++); // Increment PC
+        lc3.instr = MEM_READ(lc3.reg[PC]++); // Increment PC
         lc3.op = lc3.instr >> 12;
         switch (lc3.op)
         {
@@ -80,7 +82,7 @@ int main(int argc, const char* argv[]){
                 lc3.source_reg_2 = lc3.instr & 0x7;
                 lc3.reg[lc3.dest_reg] = lc3.reg[lc3.source_reg_1] + lc3.reg[lc3.source_reg_2];
             }
-            update_flag(lc3);
+            update_flag(&lc3);
             break;
         case LD:
         /*
@@ -90,7 +92,7 @@ int main(int argc, const char* argv[]){
             lc3.dest_reg = (lc3.instr >> 9) & 0x7;
             lc3.pc_offset = SIGN_EXTEND((lc3.instr & 0x1ff),9);
             lc3.reg[lc3.dest_reg] = MEM_READ(lc3.reg[PC]+lc3.pc_offset);
-            update_flag(lc3);
+            update_flag(&lc3);
             break;
         case ST:
         /*
@@ -108,7 +110,7 @@ int main(int argc, const char* argv[]){
             Stores next PC in R7
         */
             lc3.reg[R7] = lc3.reg[PC];
-            if (lc3.instr & 0x0800){ // AND with the relevant bit   
+            if (!(lc3.instr & 0x0800)){ // AND with the relevant bit   
                 lc3.source_reg_1 = (lc3.instr >> 6) & 0x7;
                 lc3.reg[PC] = lc3.reg[lc3.source_reg_1];
             }else{
@@ -130,7 +132,7 @@ int main(int argc, const char* argv[]){
                 lc3.source_reg_2 = lc3.instr & 0x7;
                 lc3.reg[lc3.dest_reg] = lc3.reg[lc3.source_reg_1] & lc3.reg[lc3.source_reg_2];
             }
-            update_flag(lc3);
+            update_flag(&lc3);
             break;
         case LDR:
         /*
@@ -141,6 +143,7 @@ int main(int argc, const char* argv[]){
             lc3.source_reg_1 = (lc3.instr >> 6) & 0x7;
             lc3.pc_offset = SIGN_EXTEND((lc3.instr & 0x3f),6);
             lc3.reg[lc3.dest_reg] = MEM_READ(lc3.reg[lc3.source_reg_1] + lc3.pc_offset);
+            update_flag(&lc3);
             break;
         case STR:
         /*
@@ -149,8 +152,8 @@ int main(int argc, const char* argv[]){
         */
             lc3.dest_reg = (lc3.instr >> 9) & 0x7;
             lc3.source_reg_1 = (lc3.instr >> 6) & 0x7;
-            lc3.ival = SIGN_EXTEND((lc3.instr&0x1f), 5);
-            MEM_WRITE(lc3.reg[lc3.source_reg_1]+lc3.ival,lc3.reg[lc3.dest_reg]);
+            lc3.pc_offset = SIGN_EXTEND((lc3.instr&0x3f), 6);
+            MEM_WRITE(lc3.reg[lc3.source_reg_1]+lc3.pc_offset,lc3.reg[lc3.dest_reg]);
             break;
         case NOT:
         /*
@@ -159,7 +162,7 @@ int main(int argc, const char* argv[]){
             lc3.dest_reg = (lc3.instr >> 9) & 0x7;
             lc3.source_reg_1 = (lc3.instr >> 6) & 0x7;
             lc3.reg[lc3.dest_reg] = ~lc3.reg[lc3.source_reg_1];
-            update_flag(lc3);
+            update_flag(&lc3);
             break;
         case LDI:
         /*
@@ -168,7 +171,7 @@ int main(int argc, const char* argv[]){
             lc3.dest_reg = (lc3.instr >> 9) & 0x7;
             lc3.pc_offset = SIGN_EXTEND((lc3.instr & 0x1ff),9);
             lc3.reg[lc3.dest_reg] = MEM_READ(MEM_READ(lc3.reg[PC]+lc3.pc_offset));
-            update_flag(lc3);
+            update_flag(&lc3);
             break;
         case STI:
         /*
@@ -176,7 +179,7 @@ int main(int argc, const char* argv[]){
         */
             lc3.source_reg_1 = (lc3.instr >> 9) & 0x7;
             lc3.pc_offset = SIGN_EXTEND(lc3.instr & 0x1ff,9);
-            MEM_WRITE(MEM_READ(reg[PC]+lc3.pc_offset),lc3.reg[lc3.source_reg_1]);
+            MEM_WRITE(MEM_READ(lc3.reg[PC]+lc3.pc_offset),lc3.reg[lc3.source_reg_1]);
             break;
         case JMP:
         /*
@@ -189,7 +192,7 @@ int main(int argc, const char* argv[]){
             lc3.reg[PC] = lc3.reg[lc3.dest_reg];
             break;
         case RES:
-            perror("BAD INSTRUCTION");
+            perror("BAD INSTRUCTION Z");
             exit(1);
             break;
         case LEA:
@@ -199,6 +202,7 @@ int main(int argc, const char* argv[]){
             lc3.dest_reg = (lc3.instr >> 9) & 0x7;
             lc3.pc_offset = SIGN_EXTEND(lc3.instr & 0x1ff,9);
             lc3.reg[lc3.dest_reg] = lc3.reg[PC] + lc3.pc_offset;    
+            update_flag(&lc3);
             break;
         case TRAP:
         /*
@@ -214,17 +218,17 @@ int main(int argc, const char* argv[]){
                 */
                     lc3.reg[R0] = (uint16_t)getchar();
                     lc3.dest_reg = R0;
-                    update_flag(lc3);
+                    update_flag(&lc3);
                     break;
                 case TRAP_PUTS:
                 /*
                     PUTS writes a string of ascii characters to the console display. 
                     Starts with the memory address stored in R0, writing is null terminated. 
                 */
-                    uint16_t *c = memory + lc3.reg[R0];
-                    while(*c){
-                        putc((char)*c,stdout); // prints it on the terminal. 
-                        ++c;
+                    uint16_t *cc = memory + lc3.reg[R0];
+                    while(*cc){
+                        putc(((char)*cc&0xff),stdout); // prints it on the terminal. 
+                        ++cc;
                     }
                     fflush(stdout); // flushes the buffer
                     break;
@@ -235,10 +239,10 @@ int main(int argc, const char* argv[]){
                     printf("Enter a character:");
                     char input_char = getchar();
                     putc(input_char, stdout);
-                    lc3.reg[R0] = (uint16_t)input_char;
                     fflush(stdout);
+                    lc3.reg[R0] = (uint16_t)input_char;
                     lc3.dest_reg = R0;
-                    update_flag(lc3);
+                    update_flag(&lc3);
                     break;
                 case TRAP_OUT:
                 /*
@@ -257,7 +261,6 @@ int main(int argc, const char* argv[]){
                         putc(char1,stdout);
                         char char2 = (*c) >> 8;
                         if(char2) putc(char2, stdout);
-                        putc(char2,stdout);
                         ++c;
                     }
                     break;
@@ -267,15 +270,17 @@ int main(int argc, const char* argv[]){
                     lc3.running = 0;
                     break;
                 default:
-                    perror("BAD INSTRUCTION");
+                    perror("BAD INSTRUCTION X");
                     exit(1);
                     break;
             }
             break;
         default:
-        perror("BAD INSTRUCTION");
+        perror("BAD INSTRUCTION Y");
         exit(1);
             break;
         }
     }
+    restore_input_buffering();
+    return 0;
 }
