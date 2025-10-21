@@ -29,6 +29,10 @@ This does however make stuff kinda annoying because I have to keep typing "lc3.s
 ### Instructions:
 All of the instructions are well described here [LC3 ISA description](https://www.jmeiners.com/lc3-vm/supplies/lc3-isa.pdf)
 
+## Assembler 
+I would also like to make an assembler for LC3 to understand how compilers work. Based on my research (a simple ChatGPT summary and Uwaterloo MIPS assembly slides) Assemblers work on a 2 pass system, where in one pass they find all instructions and in another pass they identify other assembly directives and create a hexdump that gets written into the instruction memory of the computer. 
+
+My Idea is to start with a single pass system, I have a C file that takes in address as argument, opens the .asm file, parses thru line by line, tokenizes it, finds the first word, hashes it as an instruction and creates a 16 bit integer based on that. I dont know how the second pass works like how the assembler directives are written into the file but I'll read about it and figure it out. 
 
 ## RISC-V 32I
 

@@ -216,7 +216,12 @@ int main(int argc, const char* argv[]){
                 /*
                     Reads ascii characters
                 */
-                    lc3.reg[R0] = (uint16_t)getchar();
+                    // Check if input is available without blocking
+                    if (check_key()) {
+                        lc3.reg[R0] = (uint16_t)getchar();
+                    } else {
+                        lc3.reg[R0] = 0; // No input available
+                    }
                     lc3.dest_reg = R0;
                     update_flag(&lc3);
                     break;
