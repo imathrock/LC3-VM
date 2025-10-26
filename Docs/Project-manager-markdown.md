@@ -14,6 +14,5 @@ This file just defines objectives and tasks to be done, updated completely at ra
 - [X] Start Following the LC3 virtual machine tutorial, understand and define the architecture
 - [X] Implement all instructions. 
 - [X] Create a LC3 state machine
-- [ ] Create tests for LC3 ISA
-- [ ] Fix the implementation by reimplementing.
+- [X] Fix the implementation by reimplementing.
 - [ ] Write an assembler 

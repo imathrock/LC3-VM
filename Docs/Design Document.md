@@ -34,7 +34,7 @@ I would also like to make an assembler for LC3 to understand how compilers work.
 
 My Idea is to start with a single pass system, I have a C file that takes in address as argument, opens the .asm file, parses thru line by line, tokenizes it, finds the first word, hashes it as an instruction and creates a 16 bit integer based on that. I dont know how the second pass works like how the assembler directives are written into the file but I'll read about it and figure it out. 
 
-## RISC-V 32I
+## Future Plans: RISC-V 32I
 
 ### Registers
 There are a total of 32 registers, they are denoted as follows:
@@ -45,4 +45,4 @@ There is no defined stack pointer register, No defined base pointer register. So
 ### Calling Conventions
 
 ### Memory
-I have defined the total memory for this CPU to be around 2 Mb. The initial addresses will serve as instruction memory. The first half of the remaining would be the heap and the rest the stack. 
+I have defined the total memory for this CPU to be around 2 Mb. The initial addresses will serve as instruction memory. The first half of the remaining would be the heap and the rest the stack. a

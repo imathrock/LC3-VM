@@ -1,10 +1,10 @@
 # ISA explained
-This document intends to explain what each of the RV32I instruction does. I will put up proper explainations later on. 
+This document intends to explain what each of the LC3 instruction does. I will put up proper explainations later on. 
 
 ## List of all Little Computer 3 instructions
 This document does a better job than I ever can: [LC3-ISA](https://www.jmeiners.com/lc3-vm/supplies/lc3-isa.pdf)
 
-## List of all RV32I instructions
+## Future Plans: List of all RV32I instructions
 This has been taken from ChatGPT.
 ### 1. Integer Computational Instructions (RV32I)
 
