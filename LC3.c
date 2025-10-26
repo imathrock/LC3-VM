@@ -51,10 +51,10 @@ void print_state(const LC3 *cpu) {
     for (int i = 0; i < COUNT; i++)
         printf("R%d: 0x%04X  ", i, cpu->reg[i]);
     printf("\n\n");
-    printf("INSTR: 0x%04X  OP: %u\n", cpu->curr.instr, cpu->curr.op);
-    printf("DR: %u  SR1: %u  SR2: %u  IMM_FLAG: %u  IMM_VAL: 0x%04X  PC_OFF: %d\n",
-           cpu->curr.dr, cpu->curr.sr1, cpu->curr.sr2,
-           cpu->curr.imm_flag, cpu->curr.imm_val, (int16_t)cpu->curr.pc_offset);
+    printf("INSTR: 0x%04X  OP: %u\n", cpu->instr, cpu->op);
+    printf("DR: %u  SR1: %u  SR2: %u  IMM_VAL: 0x%04X  PC_OFF: %d\n",
+           cpu->dr, cpu->sr1, cpu->sr2,
+            cpu->imm_val, (int16_t)cpu->pc_offset);
     printf("===================\n");
 }
 
@@ -75,89 +75,81 @@ int main(int argc, const char* argv[]){
     cpu.cond = ZRO;
     cpu.running = 1;
     while(cpu.running){
-        cpu.curr.instr = MEM_READ(cpu.PC++);
-        cpu.curr.op = get_op(cpu.curr.instr);
-        switch (cpu.curr.op){
+        cpu.instr = MEM_READ(cpu.PC++);
+        cpu.op = get_op(cpu.instr);
+        switch (cpu.op){
         case BR:
             /* BRnzp LABEL */
-           cpu.curr.pc_offset = pc_offset(cpu.curr.instr);
-           if(cpu.cond == cond(cpu.curr.instr)){
-                cpu.PC += cpu.curr.pc_offset;
+           cpu.pc_offset = pc_offset(cpu.instr);
+           if(cond(cpu.instr) & cpu.cond){
+                cpu.PC += cpu.pc_offset;
            }
-            print_state(&cpu);
             break;
         case ADD:
             /* ADD DR, SR1, SR2 */
-            cpu.curr.dr = dr(cpu.curr.instr);
-            cpu.curr.sr1 = sr1(cpu.curr.instr);
-            if((cpu.curr.instr >> 5) & 0x1){
-                cpu.curr.imm_val = imm5(cpu.curr.instr);
-                cpu.reg[cpu.curr.dr] = cpu.reg[cpu.curr.sr1] + cpu.curr.imm_val;
+            cpu.dr = dr(cpu.instr);
+            cpu.sr1 = sr1(cpu.instr);
+            if((cpu.instr >> 5) & 0x1){
+                cpu.imm_val = imm5(cpu.instr);
+                cpu.reg[cpu.dr] = cpu.reg[cpu.sr1] + cpu.imm_val;
             }else{
-                cpu.curr.sr2 = sr2(cpu.curr.instr);
-                cpu.reg[cpu.curr.dr] = cpu.reg[cpu.curr.sr1] + cpu.reg[cpu.curr.sr2];
+                cpu.sr2 = sr2(cpu.instr);
+                cpu.reg[cpu.dr] = cpu.reg[cpu.sr1] + cpu.reg[cpu.sr2];
             }
-            setcc(&cpu);
-            print_state(&cpu);
+            setcc(&cpu, cpu.dr);
             break;
         case LD:
             /* LD DR, PC_OFFSET */
-            cpu.curr.dr = dr(cpu.curr.instr);
-            cpu.curr.pc_offset = pc_offset(cpu.curr.instr);
-            cpu.reg[cpu.curr.dr] = MEM_READ(cpu.PC + cpu.curr.pc_offset);
-            setcc(&cpu);
-            print_state(&cpu);
+            cpu.dr = dr(cpu.instr);
+            cpu.pc_offset = pc_offset(cpu.instr);
+            cpu.reg[cpu.dr] = MEM_READ(cpu.PC + cpu.pc_offset);
+            setcc(&cpu, cpu.dr);
             break;
         case ST:
             /* ST SR, LABEL */
-            cpu.curr.sr1 = sr1(cpu.curr.instr);
-            cpu.curr.pc_offset = pc_offset(cpu.curr.instr);
-            MEM_WRITE(cpu.PC + cpu.curr.pc_offset , cpu.reg[cpu.curr.sr1]);
-            print_state(&cpu);
+            cpu.sr1 = dr(cpu.instr);  // ST uses bits 9-11 for source register
+            cpu.pc_offset = pc_offset(cpu.instr);
+            MEM_WRITE(cpu.PC + cpu.pc_offset , cpu.reg[cpu.sr1]);
             break;
         case JSR:
             /*  JSR  Label
                 JSRR  BaseR */
             cpu.reg[R7] = cpu.PC;
-            if(cpu.curr.instr&0x0800){
-                cpu.curr.pc_offset = pcoffset11(cpu.curr.instr);
-                cpu.PC += cpu.curr.pc_offset;
+            if(cpu.instr&0x0800){
+                cpu.pc_offset = pcoffset11(cpu.instr);
+                cpu.PC += cpu.pc_offset;
             }else{
-                cpu.curr.sr1 = baseR(cpu.curr.instr);
-                cpu.PC = cpu.reg[cpu.curr.sr1];
+                cpu.sr1 = baseR(cpu.instr);
+                cpu.PC = cpu.reg[cpu.sr1];
             }
-            print_state(&cpu);
             break;
         case AND:
             /* AND DR, SR1, SR2 */
-            cpu.curr.dr = dr(cpu.curr.instr);
-            cpu.curr.sr1 = sr1(cpu.curr.instr);
-            if((cpu.curr.instr >> 5) & 0x1){
-                cpu.curr.imm_val = imm5(cpu.curr.instr);
-                cpu.reg[cpu.curr.dr] = cpu.reg[cpu.curr.sr1] & cpu.curr.imm_val;
+            cpu.dr = dr(cpu.instr);
+            cpu.sr1 = sr1(cpu.instr);
+            if((cpu.instr >> 5) & 0x1){
+                cpu.imm_val = imm5(cpu.instr);
+                cpu.reg[cpu.dr] = cpu.reg[cpu.sr1] & cpu.imm_val;
             }else{
-                cpu.curr.sr2 = sr2(cpu.curr.instr);
-                cpu.reg[cpu.curr.dr] = cpu.reg[cpu.curr.sr1] & cpu.reg[cpu.curr.sr2];
+                cpu.sr2 = sr2(cpu.instr);
+                cpu.reg[cpu.dr] = cpu.reg[cpu.sr1] & cpu.reg[cpu.sr2];
             }
-            setcc(&cpu);
-            print_state(&cpu);
+            setcc(&cpu, cpu.dr);
             break;
         case LDR:
             /* LDR DR, baseR, offset6 */
-            cpu.curr.dr = dr(cpu.curr.instr);
-            cpu.curr.sr1 = baseR(cpu.curr.instr);
-            cpu.curr.imm_val = offset6(cpu.curr.instr);
-            cpu.reg[cpu.curr.dr] = MEM_READ(cpu.reg[cpu.curr.sr1] + cpu.curr.imm_val);
-            setcc(&cpu);
-            print_state(&cpu);
+            cpu.dr = dr(cpu.instr);
+            cpu.sr1 = baseR(cpu.instr);
+            cpu.imm_val = offset6(cpu.instr);
+            cpu.reg[cpu.dr] = MEM_READ(cpu.reg[cpu.sr1] + cpu.imm_val);
+            setcc(&cpu, cpu.dr);
             break;
         case STR:
             /* STR SR, baseR, offset6 */
-            cpu.curr.sr2 = dr(cpu.curr.instr);
-            cpu.curr.sr1 = sr1(cpu.curr.instr);
-            cpu.curr.imm_val = offset6(cpu.curr.instr);
-            MEM_WRITE(cpu.reg[cpu.curr.sr2] + cpu.curr.imm_val , cpu.reg[cpu.curr.sr1]);
-            print_state(&cpu);
+            cpu.dr = dr(cpu.instr);
+            cpu.sr1 = baseR(cpu.instr);
+            cpu.imm_val = offset6(cpu.instr);
+            MEM_WRITE(cpu.reg[cpu.sr1] + cpu.imm_val, cpu.reg[cpu.dr]);
             break;
         case RTI:
             /* Unused */
@@ -166,33 +158,29 @@ int main(int argc, const char* argv[]){
             break;
         case NOT:
             /* NOT DR, SR */
-            cpu.curr.dr = dr(cpu.curr.instr);
-            cpu.curr.sr1 = sr1(cpu.curr.instr);
-            cpu.reg[cpu.curr.dr] = ~cpu.reg[cpu.curr.sr1];
-            setcc(&cpu);
-            print_state(&cpu);
+            cpu.dr = dr(cpu.instr);
+            cpu.sr1 = sr1(cpu.instr);
+            cpu.reg[cpu.dr] = ~cpu.reg[cpu.sr1];
+            setcc(&cpu, cpu.dr);
             break;
         case LDI:
             /* LDI DR, LABEL */
-            cpu.curr.dr = dr(cpu.curr.instr);
-            cpu.curr.pc_offset = pc_offset(cpu.curr.instr);
-            cpu.reg[cpu.curr.dr] = MEM_READ(MEM_READ(cpu.PC + cpu.curr.pc_offset));
-            setcc(&cpu);
-            print_state(&cpu);
+            cpu.dr = dr(cpu.instr);
+            cpu.pc_offset = pc_offset(cpu.instr);
+            cpu.reg[cpu.dr] = MEM_READ(MEM_READ(cpu.PC + cpu.pc_offset));
+            setcc(&cpu, cpu.dr);
             break;
         case STI:
-            /* cpu. */
-            cpu.curr.dr = dr(cpu.curr.instr);
-            cpu.curr.pc_offset = pc_offset(cpu.curr.instr);
-            MEM_WRITE(MEM_READ(cpu.PC + cpu.curr.pc_offset),cpu.reg[cpu.curr.dr]);
-            print_state(&cpu);
+            /* STI DR, LABEL */
+            cpu.dr = dr(cpu.instr);
+            cpu.pc_offset = pc_offset(cpu.instr);
+            MEM_WRITE(MEM_READ(cpu.PC + cpu.pc_offset), cpu.reg[cpu.dr]);
             break;
         case JMP:
             /* JMP baseR
                RET       */
-            cpu.curr.dr = baseR(cpu.curr.instr);
-            cpu.PC = cpu.reg[cpu.curr.dr];
-            print_state(&cpu);
+            cpu.sr1 = baseR(cpu.instr);
+            cpu.PC = cpu.reg[cpu.sr1];
             break;
         case RES:
             /* Reserved */
@@ -201,88 +189,74 @@ int main(int argc, const char* argv[]){
             break;
         case LEA:
             /* LEA DR, LABEL */
-            cpu.curr.dr = dr(cpu.curr.instr);
-            cpu.curr.pc_offset = pc_offset(cpu.curr.instr);
-            cpu.reg[cpu.curr.dr] = cpu.PC + cpu.curr.pc_offset;
-            setcc(&cpu);
-            print_state(&cpu);
+            cpu.dr = dr(cpu.instr);
+            cpu.pc_offset = pc_offset(cpu.instr);
+            cpu.reg[cpu.dr] = cpu.PC + cpu.pc_offset;
+            setcc(&cpu, cpu.dr);
             break;
         case TRAP:
             /* TRAP trapvector8 */
             cpu.reg[R7] = cpu.PC;
-            switch (trapvec(cpu.curr.instr)){
-            case 0x00:
-                /* Special case for memory-mapped IO addresses */
-                /* Reading from KBSR or KBDR - handled by MEM_READ */
-                break;
-            case TRAP_GETC:
-                /* gets character from keyboard */
-                if(check_key()){
+            switch (trapvec(cpu.instr)){
+                case TRAP_GETC:
+                    /* gets character from keyboard */
                     cpu.reg[R0] = (uint16_t)getchar();
-                }else{
-                    cpu.reg[R0] = 0;
-                }
-                cpu.curr.dr = R0;
-                setcc(&cpu);
-                print_state(&cpu);
-                break;
-            case TRAP_OUT:
-                /* Outputs a character */
-                putc((char)cpu.reg[R0], stdout);
-                fflush(stdout);
-                print_state(&cpu);
-                break;
-            case TRAP_PUTS:
-                /* Prints a word string */
-                uint16_t* c = memory + cpu.reg[R0];
-                while (*c){
-                    putc((char)*c, stdout);
-                    ++c;
-                }
-                fflush(stdout);
-                print_state(&cpu);
-                break;
-            case TRAP_IN:
-                /* Takes input form keyboard and prints it on terminal */
-                char cc = getchar();
-                putc(cc,stdout);
-                fflush(stdout);
-                cpu.reg[R0] = (uint16_t)cc;
-                cpu.curr.dr = R0;
-                setcc(&cpu);
-                print_state(&cpu);
-                break;
-            case TRAP_PUTSP:
-                /* Prints out the whole string */
-                uint16_t* csp = memory + cpu.reg[R0];
-                while (*csp)
-                {
-                    char char1 = (*csp) & 0xFF;
-                    putc(char1, stdout);
-                    char char2 = (*csp) >> 8;
-                    if (char2) putc(char2, stdout);
-                    ++csp;
-                }
-                fflush(stdout);
-                print_state(&cpu);
-                break;
-            case TRAP_HALT:
-                /* HALTS the CPU */
-                printf("\n======\n HALT \n======\n");
-                exit(1);
-                break;
+                    setcc(&cpu, R0);
+                    break;
+                case TRAP_OUT:
+                    /* Outputs a character */
+                    putc((char)cpu.reg[R0], stdout);
+                    fflush(stdout);
+                    break;
+                case TRAP_PUTS:
+                    /* Prints a word string */
+                    uint16_t* c = memory + cpu.reg[R0];
+                    while (*c){
+                        putc((char)*c, stdout);
+                        ++c;
+                    }
+                    fflush(stdout);
+                    break;
+                case TRAP_IN:
+                    /* Takes input form keyboard and prints it on terminal */
+                    printf("Enter a character: ");
+                    char cc = getchar();
+                    putc(cc, stdout);
+                    fflush(stdout);
+                    cpu.reg[R0] = (uint16_t)cc;
+                    setcc(&cpu, R0);
+                    break;
+                case TRAP_PUTSP:
+                    /* Prints out the whole string */
+                    uint16_t* csp = memory + cpu.reg[R0];
+                    while (*csp)
+                    {
+                        char char1 = (*csp) & 0xFF;
+                        putc(char1, stdout);
+                        char char2 = (*csp) >> 8;
+                        if (char2) putc(char2, stdout);
+                        ++csp;
+                    }
+                    fflush(stdout);
+                    break;
+                case TRAP_HALT:
+                    /* HALTS the CPU */
+                    printf("\n HALT \n");
+                    fflush(stdout);
+                    cpu.running = 0;
+                    break;
 
-            default:
-                print_state(&cpu);
-                printf("Unknown trap vector: 0x%02x\n", trapvec(cpu.curr.instr));
-                perror("BAD INSTRUCTION: TRAP ROUTINE FUCKED");
-                exit(0);
-                break;
-            }
+                default:
+                    
+                    printf("Unknown trap vector: 0x%02x\n", trapvec(cpu.instr));
+                    perror("BAD INSTRUCTION: TRAP ROUTINE FUCKED");
+                    exit(0);
+                    break;
+                }
             break;
 
         default :
-        print_state(&cpu);
+        
         perror("BAD INSTRUCTION: SOMETHING IS FUCKED UP");
         exit(0);
             break;

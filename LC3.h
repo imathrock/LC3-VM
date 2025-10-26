@@ -28,7 +28,7 @@ void restore_input_buffering()
 
 uint16_t check_key()
 {
-    return WaitForSingleObject(hStdin, 0) == WAIT_OBJECT_0 && _kbhit();
+    return _kbhit();
 }
 
 /*
@@ -124,23 +124,18 @@ enum{
     everything required immediately in the struct making it easy to work with. 
 */
 typedef struct{
-    uint16_t instr;
-    uint16_t op;
-    uint8_t dr, sr1, sr2;
-    uint8_t imm_flag;
-    uint16_t imm_val;
-    uint16_t pc_offset;
-} LC3instr;
-
-typedef struct{
     uint16_t reg[COUNT];
     int running;
     uint16_t cond;
     uint16_t PC;
-    LC3instr curr;
+    uint16_t instr;
+    uint16_t op;
+    uint8_t dr, sr1, sr2;
+    uint16_t imm_val;
+    uint16_t pc_offset;
 } LC3;
 
-#define SIGN_EXTEND(val, bitcount) ((val >> (bitcount-1)) & 1) ? (val | (0xffff << bitcount)) : val
+#define SIGN_EXTEND(val, bitcount) (((val) >> ((bitcount)-1)) & 1) ? ((val) | (0xFFFF << (bitcount))) : (val)
 
 // COMPLETELY UN NECESSARY BUT I JUST WANT IT.
 #define get_op(val) (val >> 12)
@@ -152,43 +147,39 @@ typedef struct{
 #define pc_offset(val) (SIGN_EXTEND((val & 0x1ff),9))
 #define pcoffset11(val) (SIGN_EXTEND((val & 0x7ff),11))
 #define imm5(val) (SIGN_EXTEND((val) & 0x1f , 5))
-#define offset6(val) ((val) & 0x3f)
+#define offset6(val) (SIGN_EXTEND((val) & 0x3f, 6))
 #define trapvec(val) ((val) & 0xff)
 #define cond(val) (((val) >> 9) & 0x7)
 
-void setcc(LC3 *cpu){
-    if(cpu->reg[cpu->curr.dr] == 0){cpu->cond = ZRO;}
-    if(cpu->reg[cpu->curr.dr] <  0){cpu->cond = NEG;}
-    if(cpu->reg[cpu->curr.dr]  > 0){cpu->cond = POS;}
+void setcc(LC3 *cpu, uint16_t r){
+    if(cpu->reg[r] == 0){
+        cpu->cond = ZRO;
+    }else if(cpu->reg[r] >> 15){
+        cpu->cond = NEG;
+    }else{
+        cpu->cond = POS;
+    }
 }
 
 /*
     Reading from memory given a Program counter value.
 */
-uint16_t MEM_READ(uint16_t addr){
-    if(addr == KBSR){
-        if(check_key()){
-            return memory[KBSR] | 0x8000;  /* Bit 15 is ready */
-        } else {
-            return 0;
+uint16_t MEM_READ(uint16_t address){
+    if (address == KBSR){
+        if (check_key()){
+            memory[KBSR] = (1 << 15);
+            memory[KBDR] = getchar();
         }
-    } else if(addr == KBDR){
-        return (uint16_t)getchar();
+        else{
+            memory[KBSR] = 0;
+        }
     }
-    return memory[addr];
+    return memory[address];
 }
 
 /*
     Writing to memory given address and value and checking bounds to ensure no overflow occurs
 */
-int MEM_WRITE(uint16_t addr, uint16_t val){
-    if(addr == KBSR || addr == KBDR){
-        /* Read-only */
-        return 0;
-    }
-    if(addr < max_mem_size){
-        memory[addr] = val;
-        return 1;
-    }
-    return 0;
+void MEM_WRITE(uint16_t addr, uint16_t val){
+    if(addr < max_mem_size){memory[addr] = val;}
 }

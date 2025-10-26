@@ -1,3 +1,4 @@
 *.exe
 *.o
 .vscode/settings.json
+lc3-win.c
