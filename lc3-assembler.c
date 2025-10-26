@@ -1,1 +1,1 @@
-#include "LC3.h"
+#include<stdio.h>

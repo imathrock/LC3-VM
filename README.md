@@ -13,6 +13,8 @@ I will be building a total of 3 virtual machines, when I say virtual machines I 
 
 [LC3 ISA description](https://www.jmeiners.com/lc3-vm/supplies/lc3-isa.pdf)
 
+[Assembler tutorial](https://www.youtube.com/watch?v=rdKX9hzA2lU)
+
 [RISC V docs](https://msyksphinz-self.github.io/riscv-isadoc/html/rvi.html)
 
 [RISCV ISA manual](https://github.com/riscv/riscv-isa-manual/tree/main)

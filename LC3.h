@@ -55,12 +55,8 @@ enum {
     R5,
     R6,
     R7,
-    PC,
-    COND,
     COUNT // total number of registers
 };
-/// @brief Using an array to define the registers
-uint16_t reg[COUNT];
 
 /*
     Instruction Set:
@@ -128,42 +124,71 @@ enum{
     everything required immediately in the struct making it easy to work with. 
 */
 typedef struct{
-    uint16_t reg[COUNT];
-    int running;
     uint16_t instr;
     uint16_t op;
-    uint8_t dest_reg;
-    uint8_t source_reg_1;
-    uint8_t source_reg_2;
-    uint8_t ival;
+    uint8_t dr, sr1, sr2;
+    uint8_t imm_flag;
+    uint16_t imm_val;
     uint16_t pc_offset;
+} LC3instr;
+
+typedef struct{
+    uint16_t reg[COUNT];
+    int running;
+    uint16_t cond;
+    uint16_t PC;
+    LC3instr curr;
 } LC3;
 
 #define SIGN_EXTEND(val, bitcount) ((val >> (bitcount-1)) & 1) ? (val | (0xffff << bitcount)) : val
 
-void update_flag(LC3 *lc3){
-    if(lc3->reg[lc3->dest_reg] == 0){lc3->reg[COND] = ZRO;}
-    else if(lc3->reg[lc3->dest_reg]>>15){lc3->reg[COND] = NEG;}
-    else{lc3->reg[COND] = POS;}
+// COMPLETELY UN NECESSARY BUT I JUST WANT IT.
+#define get_op(val) (val >> 12)
+#define dr(val) (((val) >> 9) & 0x7)
+#define sr1(val) (((val) >> 6) & 0x7)
+#define sr2(val) ((val) & 0x7)
+#define cb(val) ()
+#define baseR(val) (((val) >> 6) & 0x7)
+#define pc_offset(val) (SIGN_EXTEND((val & 0x1ff),9))
+#define pcoffset11(val) (SIGN_EXTEND((val & 0x7ff),11))
+#define imm5(val) (SIGN_EXTEND((val) & 0x1f , 5))
+#define offset6(val) ((val) & 0x3f)
+#define trapvec(val) ((val) & 0xff)
+#define cond(val) (((val) >> 9) & 0x7)
+
+void setcc(LC3 *cpu){
+    if(cpu->reg[cpu->curr.dr] == 0){cpu->cond = ZRO;}
+    if(cpu->reg[cpu->curr.dr] <  0){cpu->cond = NEG;}
+    if(cpu->reg[cpu->curr.dr]  > 0){cpu->cond = POS;}
 }
 
 /*
     Reading from memory given a Program counter value.
 */
-uint16_t MEM_READ(uint16_t PCval){
-    if (PCval == KBSR){
-        if (check_key()){
-            memory[KBSR] = (1<<15);
-            memory[KBDR] = getchar();
+uint16_t MEM_READ(uint16_t addr){
+    if(addr == KBSR){
+        if(check_key()){
+            return memory[KBSR] | 0x8000;  /* Bit 15 is ready */
+        } else {
+            return 0;
         }
-        else{
-            memory[KBSR] = 0;
-        }
+    } else if(addr == KBDR){
+        return (uint16_t)getchar();
     }
-    return memory[PCval];
-} 
+    return memory[addr];
+}
 
 /*
     Writing to memory given address and value and checking bounds to ensure no overflow occurs
 */
-#define MEM_WRITE(addr,val) ((addr) < max_mem_size ? (memory[(addr)] = (uint16_t)(val), 1) : 0)
+int MEM_WRITE(uint16_t addr, uint16_t val){
+    if(addr == KBSR || addr == KBDR){
+        /* Read-only */
+        return 0;
+    }
+    if(addr < max_mem_size){
+        memory[addr] = val;
+        return 1;
+    }
+    return 0;
+}
