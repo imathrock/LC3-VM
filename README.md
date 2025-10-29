@@ -8,7 +8,7 @@ I will be building a total of 2 virtual machines, when I say virtual machines I 
 
 ## Current Status
 - LC3 Virtual Machine: Implemented
-- LC3 Assembler: Under development
+- LC3 Assembler: Currently implementing 1 pass 
 
 ## How to Run
 
@@ -44,6 +44,7 @@ The project includes two example programs:
    ./lc3 2048.obj
    ```
 Example of the game being played.
+
 ![alt text](Docs/image.png)
 
 ### Manual Compilation
@@ -72,3 +73,4 @@ The VM follows the LC3 ISA specification and can execute compiled LC3 programs i
 
 [Assembler tutorial](https://www.youtube.com/watch?v=rdKX9hzA2lU)
 
+[Assemblers and Loaders](https://www.davidsalomon.name/assem.advertis/AssemAd.html)
