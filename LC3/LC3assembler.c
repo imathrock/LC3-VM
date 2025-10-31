@@ -68,52 +68,32 @@ int main(int argc, const char* argv[]) {
         uint16_t instruction = 0;
         char*instr = strtok(linebuf," ");
         while(instr!=NULL){
+            if(!strcmp(instr,";;")) {break;}
+            if(!strcmp(instr,";")) {break;}
+            if(!strcmp(instr,"BR")) {instruction |= 0x0000;}
+            else if(!strcmp(instr,"ADD")) {instruction |= 0x1000;}
+            else if(!strcmp(instr,"LD")) {instruction |= 0x2000;}
+            else if(!strcmp(instr,"ST")) {instruction |= 0x3000;}
+            else if(!strcmp(instr,"JSR")) {instruction |= 0x4000;}
+            else if(!strcmp(instr,"AND")) {instruction |= 0x5000;}
+            else if(!strcmp(instr,"LDR")) {instruction |= 0x6000;}
+            else if(!strcmp(instr,"STR")) {instruction |= 0x7000;}
+            else if(!strcmp(instr,"RTI")) {instruction |= 0x8000;}
+            else if(!strcmp(instr,"NOT")) {instruction |= 0x9000;}
+            else if(!strcmp(instr,"LDI")) {instruction |= 0xA000;}
+            else if(!strcmp(instr,"STI")) {instruction |= 0xB000;}
+            else if(!strcmp(instr,"JMP")) {instruction |= 0xC000;}
+            else if(!strcmp(instr,"LEA")) {instruction |= 0xE000;}
+            else if(!strcmp(instr,"RES")) {instruction |= 0xD000;}
+            else if(!strcmp(instr,"GETC")) {instruction |= 0xF020;}
+            else if(!strcmp(instr,"OUT")) {instruction |= 0xF021;}
+            else if(!strcmp(instr,"PUTS")) {instruction |= 0xF022;}
+            else if(!strcmp(instr,"IN")) {instruction |= 0xF023;}
+            else if(!strcmp(instr,"PUTSP")) {instruction |= 0xF024;}
+            else if(!strcmp(instr,"HALT")) {instruction |= 0xF025;}
+            else if(){}
+            printf("Operand: %s\n",instr);
             printf("%s\n",instr);
-            // if (strcmp(instr, "BR") == 0) {
-            //     instruction |= 0x0000;
-            // } else if (strcmp(instr, "ADD") == 0) {
-            //     instruction |= 0x1000;
-            // } else if (strcmp(instr, "LD") == 0) {
-            //     instruction |= 0x2000;
-            // } else if (strcmp(instr, "ST") == 0) {
-            //     instruction |= 0x3000;
-            // } else if (strcmp(instr, "JSR") == 0) {
-            //     instruction |= 0x4000;
-            // } else if (strcmp(instr, "AND") == 0) {
-            //     instruction |= 0x5000;
-            // } else if (strcmp(instr, "LDR") == 0) {
-            //     instruction |= 0x6000;
-            // } else if (strcmp(instr, "STR") == 0) {
-            //     instruction |= 0x7000;
-            // } else if (strcmp(instr, "RTI") == 0) {
-            //     instruction |= 0x8000;
-            // } else if (strcmp(instr, "NOT") == 0) {
-            //     instruction |= 0x9000;
-            // } else if (strcmp(instr, "LDI") == 0) {
-            //     instruction |= 0xA000;
-            // } else if (strcmp(instr, "STI") == 0) {
-            //     instruction |= 0xB000;
-            // } else if (strcmp(instr, "JMP") == 0) {
-            //     instruction |= 0xC000;
-            // } else if (strcmp(instr, "LEA") == 0) {
-            //     instruction |= 0xE000;
-            // } else if (strcmp(instr, "RES") == 0) {
-            //     instruction |= 0xD000;
-            // } else if (strcmp(instr, "GETC") == 0) {
-            //     instruction |= 0xF020;
-            // } else if (strcmp(instr, "OUT") == 0) {
-            //     instruction |= 0xF021;
-            // } else if (strcmp(instr, "PUTS") == 0) {
-            //     instruction |= 0xF022;
-            // } else if (strcmp(instr, "IN") == 0) {
-            //     instruction |= 0xF023;
-            // } else if (strcmp(instr, "PUTSP") == 0) {
-            //     instruction |= 0xF024;
-            // } else if (strcmp(instr, "HALT") == 0) {
-            //     instruction |= 0xF025;
-            // } else {
-            //     continue;
-            // }
             instr = strtok(NULL, " ");
         }
         printf("\n\n");
