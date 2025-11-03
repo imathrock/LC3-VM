@@ -70,7 +70,25 @@ int main(int argc, const char* argv[]) {
         while(instr!=NULL){
             if(!strcmp(instr,";;")) {break;}
             if(!strcmp(instr,";")) {break;}
+            if(!(strcmp(instr,".ORIG"))){
+                printf("Directive: %s\n",instr);
+                instr = strtok(NULL, " ");
+                instruction = (uint16_t)strtol(instr,NULL,0);
+                fwrite(&instruction,sizeof(uint16_t),1,out);
+                rewind(out);
+                uint16_t test;
+                fread(&test,sizeof(uint16_t),1,out);
+                printf("Starting address: %i\n",test);
+                continue;
+            }
             if(!strcmp(instr,"BR")) {instruction |= 0x0000;}
+            else if(!strcmp(instr,"BRn")) {instruction |= 0x0800;}
+            else if(!strcmp(instr,"BRz")) {instruction |= 0x0400;}
+            else if(!strcmp(instr,"BRp")) {instruction |= 0x0200;}
+            else if(!strcmp(instr,"BRnz")) {instruction |= 0x0C00;}
+            else if(!strcmp(instr,"BRnp")) {instruction |= 0x0A00;}
+            else if(!strcmp(instr,"BRzp")) {instruction |= 0x0600;}
+            else if(!strcmp(instr,"BRnzp")) {instruction |= 0x0E00;}
             else if(!strcmp(instr,"ADD")) {instruction |= 0x1000;}
             else if(!strcmp(instr,"LD")) {instruction |= 0x2000;}
             else if(!strcmp(instr,"ST")) {instruction |= 0x3000;}
@@ -91,8 +109,7 @@ int main(int argc, const char* argv[]) {
             else if(!strcmp(instr,"IN")) {instruction |= 0xF023;}
             else if(!strcmp(instr,"PUTSP")) {instruction |= 0xF024;}
             else if(!strcmp(instr,"HALT")) {instruction |= 0xF025;}
-            else if(){}
-            printf("Operand: %s\n",instr);
+            else{}
             printf("%s\n",instr);
             instr = strtok(NULL, " ");
         }
