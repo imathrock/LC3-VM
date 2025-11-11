@@ -1,5 +1,5 @@
 ;; Set R0 to the number of bits "on" in R1
-        .ORIG   x3000
+        .ORIG   x6000
 pop     AND     R0,R0,#0
         ADD     R1,R1,#0       ;; test the msb
         BRzp    skipf
