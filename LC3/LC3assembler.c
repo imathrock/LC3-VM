@@ -13,7 +13,7 @@ uint16_t symbol_lookup(char*label){
     for(int i = 0; i < LISTSIZE; i++){
         if(!strcmp(label, list[i].name)) return list[i].address;
     }
-    return 0;
+    return 0xffff;
 }
 
 // instr_assemblers
@@ -82,9 +82,54 @@ void ST(char**instr, uint16_t*instruction, FILE*out){
     fwrite(instruction, sizeof(uint16_t),1,out);
 }
 
-// void JSR(char**instr, uint16_t*instruction, FILE*out);
-// void AND(char**instr, uint16_t*instruction, FILE*out);
-// void LDR(char**instr, uint16_t*instruction, FILE*out);
+void JSR(char**instr, uint16_t*instruction, FILE*out){
+    *instruction |= 0x4000;
+    *instr = strtok(NULL," ");
+    uint16_t label_addr = symbol_lookup(*instr);
+    if(label_addr!=0xffff){
+        int16_t pc_offset = label_addr - (LOCTR + 1);
+        *instruction |= (pc_offset & 0x07FF);
+        fwrite(instruction, sizeof(uint16_t),1,out);
+    }else{
+        uint16_t baseR = (uint16_t)strtol(*instr + 1, NULL, 10);
+        *instruction |= (baseR & 0x0007) << 6;
+        fwrite(instruction, sizeof(uint16_t),1,out);
+    }
+}
+void AND(char**instr, uint16_t*instruction, FILE*out){
+    *instruction |= 0x5000;
+    *instr = strtok(NULL,",");
+    uint16_t dr = (uint16_t)strtol(*instr + 1, NULL, 10);
+    *instruction |= (dr & 0x0007) << 9;
+    *instr = strtok(NULL,",");
+    uint16_t sr1 = (uint16_t)strtol(*instr + 1, NULL, 10);
+    *instruction |= (sr1 & 0x0007) << 6;
+    *instr = strtok(NULL,",");
+    if((*instr)[0] == 'R'){
+        uint16_t sr2 = (uint16_t)strtol(*instr + 1, NULL, 10);
+        *instruction |= (sr2 & 0x0007);
+    }else{
+        int16_t imm5 = (int16_t)strtol(*instr, NULL, 10);
+        *instruction |= 0x0020;
+          *instruction |= (imm5 & 0x001F);
+    }
+    fwrite(instruction, sizeof(uint16_t),1,out);
+}
+
+void LDR(char**instr, uint16_t*instruction, FILE*out){
+    *instruction |= 0x6000;
+    *instr = strtok(NULL,",");
+    uint16_t dr = (uint16_t)strtol(*instr + 1, NULL, 10);
+    *instruction |= (dr & 0x0007) << 9;
+    *instr = strtok(NULL,",");
+    uint16_t baseR = (uint16_t)strtol(*instr + 1, NULL, 10);
+    *instruction |= (baseR & 0x0007) << 6;
+    *instr = strtok(NULL,",");
+    int16_t offset6 = (int16_t)strtol(*instr, NULL, 10);
+    *instruction |= (offset6 & 0x003F);
+    fwrite(instruction, sizeof(uint16_t),1,out);
+}
+
 // void STR(char**instr, uint16_t*instruction, FILE*out);
 // void RTI(char**instr, uint16_t*instruction, FILE*out);
 // void NOT(char**instr, uint16_t*instruction, FILE*out);
@@ -93,12 +138,36 @@ void ST(char**instr, uint16_t*instruction, FILE*out){
 // void JMP(char**instr, uint16_t*instruction, FILE*out);
 // void RES(char**instr, uint16_t*instruction, FILE*out);
 // void LEA(char**instr, uint16_t*instruction, FILE*out);
-// void GETC(char**instr, uint16_t*instruction, FILE*out);
-// void OUT(char**instr, uint16_t*instruction, FILE*out);
-// void PUTS(char**instr, uint16_t*instruction, FILE*out);
-// void IN(char**instr, uint16_t*instruction, FILE*out);
-// void PUTSP(char**instr, uint16_t*instruction, FILE*out);
-// void HALT(char**instr, uint16_t*instruction, FILE*out);
+
+void GETC(char**instr, uint16_t*instruction, FILE*out){
+    *instruction |= 0xF020;
+    fwrite(instruction, sizeof(uint16_t),1,out);
+}
+
+void OUT(char**instr, uint16_t*instruction, FILE*out){
+    *instruction |= 0xF021;
+    fwrite(instruction, sizeof(uint16_t),1,out);
+}
+
+void PUTS(char**instr, uint16_t*instruction, FILE*out){
+    *instruction |= 0xF022;
+    fwrite(instruction, sizeof(uint16_t),1,out);
+}
+
+void IN(char**instr, uint16_t*instruction, FILE*out){
+    *instruction |= 0xF023;
+    fwrite(instruction, sizeof(uint16_t),1,out);
+}
+
+void PUTSP(char**instr, uint16_t*instruction, FILE*out){
+    *instruction |= 0xF024;
+    fwrite(instruction, sizeof(uint16_t),1,out);
+}
+
+void HALT(char**instr, uint16_t*instruction, FILE*out){
+    *instruction |= 0xF025;
+    fwrite(instruction, sizeof(uint16_t),1,out);
+}
 
 // printing the listing table
 void print_list(int symcount){
@@ -248,32 +317,72 @@ int main(int argc, const char* argv[]) {
             }
 
             if(is_opcode(&instr)){
-                LOCTR++;
                 if(!strcmp(instr, "ADD")){
                     ADD(&instr, &instruction, out);
                     printf("%X: 0x%04X\n",LOCTR, instruction);
                     instruction = 0;
-                    break;
                 }
                 if(!strcmp(instr, "BR")){
                     BR(&instr, &instruction, out);
                     printf("%X: 0x%04X\n",LOCTR, instruction);
                     instruction = 0;
-                    break;
                 }
                 if(!strcmp(instr, "LD")){
                     LD(&instr, &instruction, out);
                     printf("%X: 0x%04X\n",LOCTR, instruction);
                     instruction = 0;
-                    break;
                 }
                 if(!strcmp(instr, "ST")){
                     ST(&instr, &instruction, out);
                     printf("%X: 0x%04X\n",LOCTR, instruction);
                     instruction = 0;
-                    break;
                 }
-
+                if(!strcmp(instr, "JSR")){
+                    JSR(&instr, &instruction, out);
+                    printf("%X: 0x%04X\n",LOCTR, instruction);
+                    instruction = 0;
+                }
+                if(!strcmp(instr, "AND")){
+                    AND(&instr, &instruction, out);
+                    printf("%X: 0x%04X\n",LOCTR, instruction);
+                    instruction = 0;
+                }
+                if(!strcmp(instr, "GETC")){
+                    GETC(&instr, &instruction, out);
+                    printf("%X: 0x%04X\n",LOCTR, instruction);
+                    instruction = 0;
+                }
+                if(!strcmp(instr, "PUTS")){
+                    PUTS(&instr, &instruction, out);
+                    printf("%X: 0x%04X\n",LOCTR, instruction);
+                    instruction = 0;
+                }
+                if(!strcmp(instr, "OUT")){
+                    OUT(&instr, &instruction, out);
+                    printf("%X: 0x%04X\n",LOCTR, instruction);
+                    instruction = 0;
+                }
+                if(!strcmp(instr, "IN")){
+                    IN(&instr, &instruction, out);
+                    printf("%X: 0x%04X\n",LOCTR, instruction);
+                    instruction = 0;
+                }
+                if(!strcmp(instr, "PUTSP")){
+                    PUTSP(&instr, &instruction, out);
+                    printf("%X: 0x%04X\n",LOCTR, instruction);
+                    instruction = 0;
+                }
+                if(!strcmp(instr, "LDR")){
+                    LDR(&instr, &instruction, out);
+                    printf("%X: 0x%04X\n",LOCTR, instruction);
+                    instruction = 0;
+                }
+                if(!strcmp(instr, "HALT")){
+                    HALT(&instr, &instruction, out);
+                    printf("%X: 0x%04X\n",LOCTR, instruction);
+                    instruction = 0;
+                }
+                LOCTR++;
             }
             else{}
 
