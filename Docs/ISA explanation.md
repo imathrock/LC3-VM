@@ -1,193 +1,173 @@
-# ISA explained
-This document intends to explain what each of the LC3 instruction does. I will put up proper explainations later on. 
+# LC3 Instruction Set Architecture Reference
 
-## List of all Little Computer 3 instructions
-This document does a better job than I ever can: [LC3-ISA](https://www.jmeiners.com/lc3-vm/supplies/lc3-isa.pdf)
+This document provides a reference for the LC3 instruction set architecture implemented in this virtual machine.
 
-## Future Plans: List of all RV32I instructions
-This has been taken from ChatGPT.
-### 1. Integer Computational Instructions (RV32I)
+## LC3 Instruction Set Overview
 
-### Register–Register Arithmetic
+The Little Computer 3 (LC3) is a 16-bit instruction set architecture designed for educational purposes. All instructions are 16 bits wide, with a 4-bit opcode (bits 15-12) and varying operand formats.
 
-```
-add   rd, rs1, rs2   # rd = rs1 + rs2
-sub   rd, rs1, rs2   # rd = rs1 - rs2
-sll   rd, rs1, rs2   # rd = rs1 %3C< (rs2 & 0x1F)
-srl   rd, rs1, rs2   # rd = rs1 %3E> (rs2 & 0x1F) logical
-sra   rd, rs1, rs2   # rd = rs1 >> (rs2 & 0x1F) arithmetic
-slt   rd, rs1, rs2   # rd = (rs1 < rs2) ? 1 : 0 (signed)
-sltu  rd, rs1, rs2   # same but unsigned
-xor   rd, rs1, rs2   # rd = rs1 ^ rs2
-or    rd, rs1, rs2   # rd = rs1 | rs2
-and   rd, rs1, rs2   # rd = rs1 & rs2
-```
+For complete and authoritative documentation, refer to the [LC3 ISA Specification](https://www.jmeiners.com/lc3-vm/supplies/lc3-isa.pdf). This document provides a brief overview of the instruction set.
 
-### Immediate Arithmetic
+## Instruction Categories
 
-```
-addi  rd, rs1, imm   # rd = rs1 + imm
-slti  rd, rs1, imm   # rd = (rs1 < imm) ? 1 : 0 (signed)
-sltiu rd, rs1, imm   # unsigned version
-xori  rd, rs1, imm   # rd = rs1 ^ imm
-ori   rd, rs1, imm   # rd = rs1 | imm
-andi  rd, rs1, imm   # rd = rs1 & imm
-slli  rd, rs1, shamt # rd = rs1 << shamt
-srli  rd, rs1, shamt # logical right shift
-srai  rd, rs1, shamt # arithmetic right shift
-```
+### Arithmetic and Logic Instructions
 
+**ADD - Addition**
+- Format: `ADD DR, SR1, SR2` or `ADD DR, SR1, imm5`
+- Opcode: 0x1
+- Description: Adds two values and stores result in destination register. Supports register-register or register-immediate modes (bit 5 selects mode).
+- Condition codes: Set based on result
 
+**AND - Bitwise AND**
+- Format: `AND DR, SR1, SR2` or `AND DR, SR1, imm5`
+- Opcode: 0x5
+- Description: Performs bitwise AND operation. Supports register-register or register-immediate modes.
+- Condition codes: Set based on result
 
-## 2. Control Transfer
+**NOT - Bitwise NOT**
+- Format: `NOT DR, SR`
+- Opcode: 0x9
+- Description: Performs bitwise NOT (one's complement) operation.
+- Condition codes: Set based on result
 
-### Unconditional Jumps
+### Memory Instructions
 
-```
-jal   rd, offset     # rd = PC+4; PC += offset
-jalr  rd, rs1, imm   # rd = PC+4; PC = (rs1+imm)&~1
-```
+**LD - Load**
+- Format: `LD DR, label`
+- Opcode: 0x2
+- Description: Loads value from memory address (PC + 9-bit signed offset) into destination register.
+- Condition codes: Set based on loaded value
 
-### Conditional Branches
+**LDI - Load Indirect**
+- Format: `LDI DR, label`
+- Opcode: 0xA
+- Description: Loads address from (PC + 9-bit signed offset), then loads value from that address (double indirection).
+- Condition codes: Set based on loaded value
 
-```
-beq   rs1, rs2, offset  # if rs1==rs2 jump
-bne   rs1, rs2, offset  # if rs1!=rs2 jump
-blt   rs1, rs2, offset  # if rs1<rs2 signed
-bge   rs1, rs2, offset  # if rs1>=rs2 signed
-bltu  rs1, rs2, offset  # unsigned
-bgeu  rs1, rs2, offset  # unsigned
-```
+**LDR - Load Register**
+- Format: `LDR DR, BaseR, offset6`
+- Opcode: 0x6
+- Description: Loads value from memory address (BaseR + 6-bit signed offset) into destination register.
+- Condition codes: Set based on loaded value
 
+**ST - Store**
+- Format: `ST SR, label`
+- Opcode: 0x3
+- Description: Stores source register value to memory address (PC + 9-bit signed offset).
 
+**STI - Store Indirect**
+- Format: `STI SR, label`
+- Opcode: 0xB
+- Description: Stores source register value to address found at (PC + 9-bit signed offset).
 
-## 3. Memory Access
+**STR - Store Register**
+- Format: `STR SR, BaseR, offset6`
+- Opcode: 0x7
+- Description: Stores source register value to memory address (BaseR + 6-bit signed offset).
 
-### Loads
+**LEA - Load Effective Address**
+- Format: `LEA DR, label`
+- Opcode: 0xE
+- Description: Computes effective address (PC + 9-bit signed offset) and stores in destination register.
+- Condition codes: Set based on computed address
 
-```
-lb   rd, offset(rs1)   # load byte sign-extended
-lh   rd, offset(rs1)   # load halfword sign-extended
-lw   rd, offset(rs1)   # load word
-lbu  rd, offset(rs1)   # load byte zero-extended
-lhu  rd, offset(rs1)   # load halfword zero-extended
-```
+### Control Flow Instructions
 
-### Stores
+**BR - Branch**
+- Format: `BRnzp label` (or combinations: BRn, BRz, BRp, BRnz, BRnp, BRzp, BRnzp)
+- Opcode: 0x0
+- Description: Conditionally branches to (PC + 9-bit signed offset) if condition flags match. Bits 11-9 encode condition (N, Z, P).
 
-```
-sb   rs2, offset(rs1)  # store byte
-sh   rs2, offset(rs1)  # store halfword
-sw   rs2, offset(rs1)  # store word
-```
+**JMP - Jump**
+- Format: `JMP BaseR` or `RET` (when BaseR is R7)
+- Opcode: 0xC
+- Description: Unconditionally jumps to address in BaseR register. RET is a special case using R7.
 
+**JSR - Jump to Subroutine**
+- Format: `JSR label` or `JSRR BaseR`
+- Opcode: 0x4
+- Description: Saves PC in R7, then jumps to subroutine. Supports PC-relative (bit 11 set) or register-based modes.
 
+**RTI - Return from Interrupt**
+- Format: `RTI`
+- Opcode: 0x8
+- Description: Returns from interrupt service routine. Unused in this implementation.
 
-## 4. Upper Immediate
+### System Instructions
 
-```
-lui   rd, imm20    # rd = imm20 << 12
-auipc rd, imm20    # rd = PC + (imm20 << 12)
-```
+**TRAP - Execute Trap Routine**
+- Format: `TRAP trapvector8`
+- Opcode: 0xF
+- Description: Executes system routine specified by 8-bit trap vector. Saves PC in R7 before jumping.
 
+**RES - Reserved**
+- Opcode: 0xD
+- Description: Reserved opcode, unused in this implementation.
 
+## Trap Routines
 
-## 5. System Instructions
+The LC3 provides several built-in trap routines for I/O operations:
 
-```
-ecall    # environment call (syscall)
-ebreak   # debugger breakpoint
-csrrw rd, csr, rs1   # atomic read/write CSR
-csrrs rd, csr, rs1   # read + set bits
-csrrc rd, csr, rs1   # read + clear bits
-csrrwi rd, csr, imm  # same with immediate
-csrrsi rd, csr, imm
-csrrci rd, csr, imm
-```
+**TRAP_GETC (0x20)**
+- Gets character from keyboard without echoing to terminal
+- Stores character in R0
+- Sets condition codes based on character value
 
+**TRAP_OUT (0x21)**
+- Outputs character from R0 to terminal
 
+**TRAP_PUTS (0x22)**
+- Outputs null-terminated string starting at address in R0
+- String is stored as sequence of 16-bit words, one character per word
 
-## 6. Multiplication and Division (M Extension)
+**TRAP_IN (0x23)**
+- Gets character from keyboard and echoes to terminal
+- Prompts user with "Enter a character: "
+- Stores character in R0
+- Sets condition codes based on character value
 
-```
-mul    rd, rs1, rs2   # lower 32 bits
-mulh   rd, rs1, rs2   # upper 32 bits signed* signed
-mulhsu rd, rs1, rs2   # signed * unsigned
-mulhu  rd, rs1, rs2   # unsigned * unsigned
-div    rd, rs1, rs2   # signed division
-divu   rd, rs1, rs2   # unsigned division
-rem    rd, rs1, rs2   # signed remainder
-remu   rd, rs1, rs2   # unsigned remainder
-```
+**TRAP_PUTSP (0x24)**
+- Outputs byte string starting at address in R0
+- Each 16-bit word contains two characters (low byte, high byte)
+- Continues until null byte is encountered
 
+**TRAP_HALT (0x25)**
+- Halts program execution
+- Prints "HALT" message and exits
 
+## Instruction Encoding
 
-## 7. Atomic Instructions (A Extension, RV32A)
-
-```
-lr.w   rd, (rs1)       # load-reserved
-sc.w   rd, rs2, (rs1)  # store-conditional
-amoswap.w rd, rs2, (rs1) # swap
-amoadd.w  rd, rs2, (rs1) # atomic add
-amoand.w  rd, rs2, (rs1) # atomic and
-amoor.w   rd, rs2, (rs1) # atomic or
-amoxor.w  rd, rs2, (rs1) # atomic xor
-amomin.w  rd, rs2, (rs1) # atomic min signed
-amomax.w  rd, rs2, (rs1) # atomic max signed
-amominu.w rd, rs2, (rs1) # atomic min unsigned
-amomaxu.w rd, rs2, (rs1) # atomic max unsigned
-```
-
-
-
-## 8. Floating-Point Instructions (F/D Extensions)
-
-Examples for RV32F (single precision):
+All LC3 instructions are 16 bits with the following general format:
 
 ```
-flw   ft0, offset(rs1)   # load float
-fsw   ft0, offset(rs1)   # store float
-fadd.s fd, fs1, fs2      # single precision add
-fsub.s fd, fs1, fs2      # subtract
-fmul.s fd, fs1, fs2      # multiply
-fdiv.s fd, fs1, fs2      # divide
-fsqrt.s fd, fs1          # sqrt
-fsgnj.s fd, fs1, fs2     # sign-inject
-fmin.s fd, fs1, fs2      # min
-fmax.s fd, fs1, fs2      # max
-fcvt.w.s rd, fs1         # float to int
-fcvt.s.w fd, rs1         # int to float
-feq.s rd, fs1, fs2       # compare equal
-flt.s rd, fs1, fs2       # compare less
-fle.s rd, fs1, fs2       # compare less/equal
+Bits 15-12: Opcode
+Bits 11-0:  Operands (format varies by instruction)
 ```
 
-Double precision (RV32D/RV64D) has `.d` versions.
+Common operand formats:
+- **Register fields**: 3 bits each (bits 11-9 for DR, bits 8-6 for SR1/BaseR, bits 2-0 for SR2)
+- **Immediate values**: 5 bits (bits 4-0) with sign extension
+- **PC offsets**: 9 bits (bits 8-0) or 11 bits (bits 10-0) with sign extension
+- **Trap vector**: 8 bits (bits 7-0)
 
+## Condition Codes
 
-## 9. Compressed Instructions (C Extension)
+The condition code register (COND) stores the result of the last operation that sets condition codes:
+- **POS (Positive)**: Result is greater than zero
+- **ZRO (Zero)**: Result equals zero
+- **NEG (Negative)**: Result is less than zero (MSB is 1)
 
-Compressed 16-bit encodings, e.g.:
+Condition codes are set by: ADD, AND, NOT, LD, LDI, LDR, LEA, and trap routines that modify R0.
 
-```
-c.addi rd, imm
-c.li   rd, imm
-c.lw   rd, offset(rs1)
-c.sw   rs2, offset(rs1)
-c.j    offset
-c.beqz rs1, offset
-c.bnez rs1, offset
-```
+## Memory Model
 
-## 10. Vector Instructions (V Extension)
+- **Addressable Space**: 64KB (65,536 bytes, 32,768 words)
+- **Word Size**: 16 bits
+- **Byte Ordering**: Big-endian in object files
+- **Memory-Mapped I/O**:
+  - 0xFE00 (KBSR): Keyboard status register
+  - 0xFE02 (KBDR): Keyboard data register
 
-Example subset:
+## Future Plans: RISC-V RV32I Instructions
 
-```
-vadd.vv vd, vs1, vs2   # vector add
-vsub.vv vd, vs1, vs2   # vector subtract
-vmul.vv vd, vs1, vs2   # vector multiply
-vdiv.vv vd, vs1, vs2   # vector divide
-vle32.v vd, (rs1)      # load vector
-vse32.v vd, (rs1)      # store vector
-```
+(To be documented when RISC-V implementation begins)
