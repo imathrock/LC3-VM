@@ -6,12 +6,18 @@ symbols list[LISTSIZE];
 
 uint16_t LOCTR = 0;
 
+uint16_t swap_endian16(uint16_t val) {
+    return (val << 8) | (val >> 8);
+}
 
 // Symbol Lookup
 uint16_t symbol_lookup(char*label){
     label[strcspn(label, "\r\n")] = '\0';
+    while(*label == ' ' || *label == '\t') {label++;}
     for(int i = 0; i < LISTSIZE; i++){
-        if(!strcmp(label, list[i].name)) return list[i].address;
+        if(!strcmp(label, list[i].name)){
+            return list[i].address;
+        }
     }
     return 0xffff;
 }
@@ -137,7 +143,17 @@ void LDR(char**instr, uint16_t*instruction, FILE*out){
 // void STI(char**instr, uint16_t*instruction, FILE*out);
 // void JMP(char**instr, uint16_t*instruction, FILE*out);
 // void RES(char**instr, uint16_t*instruction, FILE*out);
-// void LEA(char**instr, uint16_t*instruction, FILE*out);
+void LEA(char**instr, uint16_t*instruction, FILE*out){
+    *instruction |= 0xE000;
+    *instr = strtok(NULL,",");
+    uint16_t dr = (uint16_t)strtol(*instr + 1, NULL, 10);
+    *instruction |= (dr & 0x0007) << 9;
+    *instr = strtok(NULL,",");
+    uint16_t label_addr = symbol_lookup(*instr);
+    int16_t pc_offset = label_addr - (LOCTR + 1);
+    *instruction |= (pc_offset & 0x01FF);
+    fwrite(instruction, sizeof(uint16_t),1,out);
+}
 
 void GETC(char**instr, uint16_t*instruction, FILE*out){
     *instruction |= 0xF020;
@@ -313,6 +329,27 @@ int main(int argc, const char* argv[]) {
                 }
                 // String directive.
                 if(!strcmp(instr,".STRINGZ") || !strcmp(instr,".stringz")){
+                    instr = strtok(NULL,"");
+                    if(instr != NULL){
+                        while(*instr == ' ' || *instr == '\t') instr++;
+                        char *str = strdup(instr);
+                        char*original_str = str;
+                        if(str[0] == '"'){
+                            str++;
+                            str[strcspn(str, "\"")] = '\0';
+                        }
+                        for(int i = 0; i<strlen(str); i++){
+                            instruction = (uint16_t)str[i];
+                            printf("%X: 0x%04X\n",LOCTR, instruction);
+                            fwrite(&instruction, sizeof(uint16_t),1,out);
+                            LOCTR++;
+                        }
+                        instruction = 0x0000;
+                        fwrite(&instruction, sizeof(uint16_t),1,out);
+                        LOCTR++;
+                        free(original_str);
+                        instruction = 0;
+                    }
                 }
             }
 
@@ -347,6 +384,16 @@ int main(int argc, const char* argv[]) {
                     printf("%X: 0x%04X\n",LOCTR, instruction);
                     instruction = 0;
                 }
+                if(!strcmp(instr, "LDR")){
+                    LDR(&instr, &instruction, out);
+                    printf("%X: 0x%04X\n",LOCTR, instruction);
+                    instruction = 0;
+                }
+                if(!strcmp(instr, "LEA")){
+                    LEA(&instr, &instruction, out);
+                    printf("%X: 0x%04X\n",LOCTR, instruction);
+                    instruction = 0;
+                }
                 if(!strcmp(instr, "GETC")){
                     GETC(&instr, &instruction, out);
                     printf("%X: 0x%04X\n",LOCTR, instruction);
@@ -369,11 +416,6 @@ int main(int argc, const char* argv[]) {
                 }
                 if(!strcmp(instr, "PUTSP")){
                     PUTSP(&instr, &instruction, out);
-                    printf("%X: 0x%04X\n",LOCTR, instruction);
-                    instruction = 0;
-                }
-                if(!strcmp(instr, "LDR")){
-                    LDR(&instr, &instruction, out);
                     printf("%X: 0x%04X\n",LOCTR, instruction);
                     instruction = 0;
                 }
