@@ -40,6 +40,7 @@ void BR(char**instr, uint16_t*instruction, FILE*out){
     uint16_t label_addr = symbol_lookup(*instr);
     int16_t pc_offset = label_addr - (LOCTR + 1);
     *instruction |= (pc_offset & 0x01FF);
+    *instruction = swap_endian16(*instruction);
     fwrite(instruction, sizeof(uint16_t),1,out);
     free(cond);
 }
@@ -59,32 +60,35 @@ void ADD(char**instr, uint16_t*instruction, FILE*out){
     }else{
         int16_t imm5 = (int16_t)strtol(*instr, NULL, 10);
         *instruction |= 0x0020;
-          *instruction |= (imm5 & 0x001F);
+        *instruction |= (imm5 & 0x001F);
     }
+    *instruction = swap_endian16(*instruction);
     fwrite(instruction, sizeof(uint16_t),1,out);
 }
 
 void LD(char**instr, uint16_t*instruction, FILE*out){
     *instruction |= 0x2000;
-    *instr = strtok(NULL,",");
+    *instr = strtok(NULL,", ");
     uint16_t dr = (uint16_t)strtol(*instr + 1, NULL, 10);
     *instruction |= (dr & 0x0007) << 9;
-    *instr = strtok(NULL,",");
+    *instr = strtok(NULL,", ");
     uint16_t label_addr = symbol_lookup(*instr);
     int16_t pc_offset = label_addr - (LOCTR + 1);
     *instruction |= (pc_offset & 0x01FF);
+    *instruction = swap_endian16(*instruction);
     fwrite(instruction, sizeof(uint16_t),1,out);
 }
 
 void ST(char**instr, uint16_t*instruction, FILE*out){
     *instruction |= 0x3000;
-    *instr = strtok(NULL,",");
+    *instr = strtok(NULL,", ");
     uint16_t sr = (uint16_t)strtol(*instr + 1, NULL, 10);
     *instruction |= (sr & 0x0007) << 9;
-    *instr = strtok(NULL,",");
+    *instr = strtok(NULL,", ");
     uint16_t label_addr = symbol_lookup(*instr);
     int16_t pc_offset = label_addr - (LOCTR + 1);
     *instruction |= (pc_offset & 0x01FF);
+    *instruction = swap_endian16(*instruction);
     fwrite(instruction, sizeof(uint16_t),1,out);
 }
 
@@ -95,10 +99,12 @@ void JSR(char**instr, uint16_t*instruction, FILE*out){
     if(label_addr!=0xffff){
         int16_t pc_offset = label_addr - (LOCTR + 1);
         *instruction |= (pc_offset & 0x07FF);
+        *instruction = swap_endian16(*instruction);
         fwrite(instruction, sizeof(uint16_t),1,out);
     }else{
         uint16_t baseR = (uint16_t)strtol(*instr + 1, NULL, 10);
         *instruction |= (baseR & 0x0007) << 6;
+        *instruction = swap_endian16(*instruction);
         fwrite(instruction, sizeof(uint16_t),1,out);
     }
 }
@@ -117,8 +123,9 @@ void AND(char**instr, uint16_t*instruction, FILE*out){
     }else{
         int16_t imm5 = (int16_t)strtol(*instr, NULL, 10);
         *instruction |= 0x0020;
-          *instruction |= (imm5 & 0x001F);
+        *instruction |= (imm5 & 0x001F);
     }
+    *instruction = swap_endian16(*instruction);
     fwrite(instruction, sizeof(uint16_t),1,out);
 }
 
@@ -133,55 +140,130 @@ void LDR(char**instr, uint16_t*instruction, FILE*out){
     *instr = strtok(NULL,",");
     int16_t offset6 = (int16_t)strtol(*instr, NULL, 10);
     *instruction |= (offset6 & 0x003F);
+    *instruction = swap_endian16(*instruction);
     fwrite(instruction, sizeof(uint16_t),1,out);
 }
 
-// void STR(char**instr, uint16_t*instruction, FILE*out);
-// void RTI(char**instr, uint16_t*instruction, FILE*out);
-// void NOT(char**instr, uint16_t*instruction, FILE*out);
-// void LDI(char**instr, uint16_t*instruction, FILE*out);
-// void STI(char**instr, uint16_t*instruction, FILE*out);
-// void JMP(char**instr, uint16_t*instruction, FILE*out);
-// void RES(char**instr, uint16_t*instruction, FILE*out);
-void LEA(char**instr, uint16_t*instruction, FILE*out){
-    *instruction |= 0xE000;
+void STR(char**instr, uint16_t*instruction, FILE*out){
+    *instruction |= 0x7000;
+    *instr = strtok(NULL,",");
+    uint16_t sr = (uint16_t)strtol(*instr + 1, NULL, 10);
+    *instruction |= (sr & 0x0007) << 9;
+    *instr = strtok(NULL,",");
+    uint16_t baseR = (uint16_t)strtol(*instr + 1, NULL, 10);
+    *instruction |= (baseR & 0x0007) << 6;
+    *instr = strtok(NULL,",");
+    int16_t offset6 = (int16_t)strtol(*instr, NULL, 10);
+    *instruction |= (offset6 & 0x003F);
+    *instruction = swap_endian16(*instruction);
+    fwrite(instruction, sizeof(uint16_t),1,out);
+}
+
+void RTI(char**instr, uint16_t*instruction, FILE*out){
+    *instruction |= 0x8000;
+    *instruction = swap_endian16(*instruction);
+    fwrite(instruction, sizeof(uint16_t),1,out);
+}
+void NOT(char**instr, uint16_t*instruction, FILE*out){
+    *instruction |= 0x9000;
     *instr = strtok(NULL,",");
     uint16_t dr = (uint16_t)strtol(*instr + 1, NULL, 10);
     *instruction |= (dr & 0x0007) << 9;
     *instr = strtok(NULL,",");
+    uint16_t sr = (uint16_t)strtol(*instr + 1, NULL, 10);
+    *instruction |= (sr & 0x0007) << 6;
+    *instruction |= 0x003F;
+    *instruction = swap_endian16(*instruction);
+    fwrite(instruction, sizeof(uint16_t),1,out);
+}
+
+void LDI(char**instr, uint16_t*instruction, FILE*out){
+    *instruction |= 0xA000;
+    *instr = strtok(NULL,", ");
+    uint16_t dr = (uint16_t)strtol(*instr + 1, NULL, 10);
+    *instruction |= (dr & 0x0007) << 9;
+    *instr = strtok(NULL,", ");
     uint16_t label_addr = symbol_lookup(*instr);
     int16_t pc_offset = label_addr - (LOCTR + 1);
     *instruction |= (pc_offset & 0x01FF);
+    *instruction = swap_endian16(*instruction);
+    fwrite(instruction, sizeof(uint16_t),1,out);
+}
+
+void STI(char**instr, uint16_t*instruction, FILE*out){
+    *instruction |= 0xB000;
+    *instr = strtok(NULL,", ");
+    uint16_t sr = (uint16_t)strtol(*instr + 1, NULL, 10);
+    *instruction |= (sr & 0x0007) << 9;
+    *instr = strtok(NULL,", ");
+    uint16_t label_addr = symbol_lookup(*instr);
+    int16_t pc_offset = label_addr - (LOCTR + 1);
+    *instruction |= (pc_offset & 0x01FF);
+    *instruction = swap_endian16(*instruction);
+    fwrite(instruction, sizeof(uint16_t),1,out);
+}
+
+void JMP(char**instr, uint16_t*instruction, FILE*out){
+    *instruction |= 0xC000;
+    *instr = strtok(NULL," ");
+    uint16_t baseR = (uint16_t)strtol(*instr + 1, NULL, 10);
+    *instruction |= (baseR & 0x0007) << 6;
+    *instruction = swap_endian16(*instruction);
+    fwrite(instruction, sizeof(uint16_t),1,out);
+}
+
+void RES(char**instr, uint16_t*instruction, FILE*out){
+    *instruction |= 0xD000;
+    *instruction = swap_endian16(*instruction);
+    fwrite(instruction, sizeof(uint16_t),1,out);
+}
+
+void LEA(char**instr, uint16_t*instruction, FILE*out){
+    *instruction |= 0xE000;
+    *instr = strtok(NULL,", ");
+    uint16_t dr = (uint16_t)strtol(*instr + 1, NULL, 10);
+    *instruction |= (dr & 0x0007) << 9;
+    *instr = strtok(NULL,", ");
+    uint16_t label_addr = symbol_lookup(*instr);
+    int16_t pc_offset = label_addr - (LOCTR + 1);
+    *instruction |= (pc_offset & 0x01FF);
+    *instruction = swap_endian16(*instruction);
     fwrite(instruction, sizeof(uint16_t),1,out);
 }
 
 void GETC(char**instr, uint16_t*instruction, FILE*out){
     *instruction |= 0xF020;
+    *instruction = swap_endian16(*instruction);
     fwrite(instruction, sizeof(uint16_t),1,out);
 }
 
 void OUT(char**instr, uint16_t*instruction, FILE*out){
     *instruction |= 0xF021;
+    *instruction = swap_endian16(*instruction);
     fwrite(instruction, sizeof(uint16_t),1,out);
 }
 
 void PUTS(char**instr, uint16_t*instruction, FILE*out){
     *instruction |= 0xF022;
+    *instruction = swap_endian16(*instruction);
     fwrite(instruction, sizeof(uint16_t),1,out);
 }
 
 void IN(char**instr, uint16_t*instruction, FILE*out){
     *instruction |= 0xF023;
+    *instruction = swap_endian16(*instruction);
     fwrite(instruction, sizeof(uint16_t),1,out);
 }
 
 void PUTSP(char**instr, uint16_t*instruction, FILE*out){
     *instruction |= 0xF024;
+    *instruction = swap_endian16(*instruction);
     fwrite(instruction, sizeof(uint16_t),1,out);
 }
 
 void HALT(char**instr, uint16_t*instruction, FILE*out){
     *instruction |= 0xF025;
+    *instruction = swap_endian16(*instruction);
     fwrite(instruction, sizeof(uint16_t),1,out);
 }
 
@@ -302,6 +384,7 @@ int main(int argc, const char* argv[]) {
     rewind(file);
     LOCTR = 0;
     while(fgets(linebuf,sizeof(linebuf),file)){
+        // printf(linebuf);
         char*instr = strtok(linebuf," ");
         uint16_t instruction = 0;
         while(instr!=NULL){
@@ -322,6 +405,7 @@ int main(int argc, const char* argv[]) {
                     instruction = (uint16_t)strtol(instr + 1, NULL, 16);
                     LOCTR = instruction;
                     printf("%X\n",instruction);
+                    instruction = swap_endian16(instruction);
                     fwrite(&instruction, sizeof(uint16_t),1,out);
                 }
                 // allocated that many bytes of memory
@@ -341,10 +425,12 @@ int main(int argc, const char* argv[]) {
                         for(int i = 0; i<strlen(str); i++){
                             instruction = (uint16_t)str[i];
                             printf("%X: 0x%04X\n",LOCTR, instruction);
+                            instruction = swap_endian16(instruction);
                             fwrite(&instruction, sizeof(uint16_t),1,out);
                             LOCTR++;
                         }
                         instruction = 0x0000;
+                        instruction = swap_endian16(instruction);
                         fwrite(&instruction, sizeof(uint16_t),1,out);
                         LOCTR++;
                         free(original_str);
@@ -354,13 +440,15 @@ int main(int argc, const char* argv[]) {
             }
 
             if(is_opcode(&instr)){
-                if(!strcmp(instr, "ADD")){
-                    ADD(&instr, &instruction, out);
+                if(!strcmp(instr, "BR") || !strcmp(instr, "BRn") || !strcmp(instr, "BRz") || 
+                   !strcmp(instr, "BRp") || !strcmp(instr, "BRnz") || !strcmp(instr, "BRnp") || 
+                   !strcmp(instr, "BRzp") || !strcmp(instr, "BRnzp")){
+                    BR(&instr, &instruction, out);
                     printf("%X: 0x%04X\n",LOCTR, instruction);
                     instruction = 0;
                 }
-                if(!strcmp(instr, "BR")){
-                    BR(&instr, &instruction, out);
+                if(!strcmp(instr, "ADD")){
+                    ADD(&instr, &instruction, out);
                     printf("%X: 0x%04X\n",LOCTR, instruction);
                     instruction = 0;
                 }
@@ -386,6 +474,41 @@ int main(int argc, const char* argv[]) {
                 }
                 if(!strcmp(instr, "LDR")){
                     LDR(&instr, &instruction, out);
+                    printf("%X: 0x%04X\n",LOCTR, instruction);
+                    instruction = 0;
+                }
+                if(!strcmp(instr, "STR")){
+                    STR(&instr, &instruction, out);
+                    printf("%X: 0x%04X\n",LOCTR, instruction);
+                    instruction = 0;
+                }
+                if(!strcmp(instr, "RTI")){
+                    RTI(&instr, &instruction, out);
+                    printf("%X: 0x%04X\n",LOCTR, instruction);
+                    instruction = 0;
+                }
+                if(!strcmp(instr, "NOT")){
+                    NOT(&instr, &instruction, out);
+                    printf("%X: 0x%04X\n",LOCTR, instruction);
+                    instruction = 0;
+                }
+                if(!strcmp(instr, "LDI")){
+                    LDI(&instr, &instruction, out);
+                    printf("%X: 0x%04X\n",LOCTR, instruction);
+                    instruction = 0;
+                }
+                if(!strcmp(instr, "STI")){
+                    STI(&instr, &instruction, out);
+                    printf("%X: 0x%04X\n",LOCTR, instruction);
+                    instruction = 0;
+                }
+                if(!strcmp(instr, "JMP")){
+                    JMP(&instr, &instruction, out);
+                    printf("%X: 0x%04X\n",LOCTR, instruction);
+                    instruction = 0;
+                }
+                if(!strcmp(instr, "RES")){
+                    RES(&instr, &instruction, out);
                     printf("%X: 0x%04X\n",LOCTR, instruction);
                     instruction = 0;
                 }
@@ -427,13 +550,14 @@ int main(int argc, const char* argv[]) {
                 LOCTR++;
             }
             else{}
-
+            
             instr = strtok(NULL," ");
             } 
         }
-        printf("=========================\n");
-        fclose(file);
-        fclose(out);
-        return 1;
-    }
+    printf("Final LOCCTR: %X\n", LOCTR);
+    printf("=========================\n");
+    fclose(file);
+    fclose(out);
+    return 1;
+}
 

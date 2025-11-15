@@ -1,6 +1,7 @@
 ;; Reverse a string
         .ORIG    x3000
 rev     LEA      R0,FILE      ;; R0 is beginning of string
+        PUTS
         ADD      R1,R0,#-1    
 LOOP1   LDR      R3,R1,#1     ;; Note -- LDR "looks" at the word past R1
         BRz      DONE1

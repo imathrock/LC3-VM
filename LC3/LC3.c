@@ -75,6 +75,7 @@ int main(int argc, const char* argv[]){
     cpu.cond = ZRO;
     cpu.running = 1;
     while(cpu.running){
+        // print_state(&cpu);
         cpu.instr = MEM_READ(cpu.PC++);
         cpu.op = get_op(cpu.instr);
         switch (cpu.op){
