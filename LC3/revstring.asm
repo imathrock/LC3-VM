@@ -25,7 +25,9 @@ LOOP2   ADD      R2,R2,#0
         ADD      R2,R2,#-2    ;; decrease R2 by 2
         BR       LOOP2
 
-DONE2   HALT
+DONE2   LEA     R0,FILE
+        PUTS
+        HALT
 
 FILE    .STRINGZ "This is so much fun!"
         .END
